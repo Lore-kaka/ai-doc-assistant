@@ -1,6 +1,6 @@
-# FastAPI-LangChain-Portfolio
+# LangChain-Portfolio
 
-基于 FastAPI 和 LangChain 构建的智能法律问答系统，专注于《中华人民共和国治安管理处罚法》的智能检索与解答。
+基于 LangChain 构建的智能法律问答系统，对《中华人民共和国治安管理处罚法》的智能检索与解答。
 
 ## 项目简介
 
@@ -118,6 +118,4 @@ python app/rag/services.py
 
 MIT License
 
-## 贡献
 
-欢迎提交 Issue 和 Pull Request！
