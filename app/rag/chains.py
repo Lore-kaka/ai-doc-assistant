@@ -71,8 +71,4 @@ def main(query:str,session_id:str):
 
 
 if __name__ == '__main__':
-
-    #请解释一下治安管理处罚法第50条
-    
-    # print(main(query='请解释一下治安管理处罚法第50条',session_id='123'))
     print(main(query='阻碍执行紧急任务的消防车、救护车。会如何处罚。',session_id='123'))

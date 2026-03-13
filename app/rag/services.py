@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 embedding = OllamaEmbeddings(
-    model = 'qwen3-embedding:0.6b'
+    model = 'bge-m3:latest'
 )
 # embedding = DashScopeEmbeddings(
 #     model="text-embedding-v4",

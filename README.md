@@ -24,15 +24,14 @@
 ## 项目结构
 
 ```
-fastapi-langchain-portfolio/
+langchain-portfolio/
 ├── app/
 │   ├── __init__.py
 │   └── rag/
 │       ├── __init__.py
 │       ├── chains.py        # LangChain 链式调用逻辑
 │       ├── services.py      # 文档加载、分割和向量检索服务
-│       └── chroma_db/       # Chroma 向量数据库存储
-├── main.py                  # 应用入口
+│       └── chroma_db/       # Chroma 向量数据库存储                 
 ├── pyproject.toml          # 项目依赖配置
 └── README.md               # 项目说明文档
 ```
