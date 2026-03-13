@@ -2,6 +2,8 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_classic.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough,RunnableLambda
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from services import get_retrieval_result
 import os
 from dotenv import load_dotenv
@@ -21,6 +23,8 @@ prompt = ChatPromptTemplate.from_template(
 
 以下是相关的法律条文内容：
 {context}
+以下是你们聊过的历史对话记录；
+{history}
 用户的问题：
 {question}
 """
@@ -31,18 +35,44 @@ llm = ChatNVIDIA(
   model="openai/gpt-oss-120b",
   api_key=os.getenv('NVIDIA_API_KEY'), 
   temperature=0.6,
-  max_tokens=4096,
 )
+
+history={}
+def get_chat_history(session_id ):
+    if session_id not in history:
+        history[session_id] = ChatMessageHistory()
+    return history[session_id]
+
+
 chain = (
-    {'context':RunnableLambda(get_retrieval_result),'question':RunnablePassthrough()}
+    {'context':RunnableLambda(lambda x:get_retrieval_result(x['question'])),
+     'question':RunnablePassthrough(),
+     'history':RunnableLambda(lambda x: get_chat_history(x.get('session_id','')))
+    }
     | prompt
     | llm 
     |StrOutputParser()
     )
 
+chain_with_history = RunnableWithMessageHistory(
+    chain, 
+    get_chat_history,
+    input_messages_key='question',
+    history_messages_key='history',
+)
+def main(query:str,session_id:str):
+    result = chain_with_history.invoke(
+        {'question':query,'session_id':session_id},
+        config={'configurable':{'session_id':session_id}}
+    )
+    return result
+
+
+
+
 if __name__ == '__main__':
 
     #请解释一下治安管理处罚法第50条
-    # question = input('请输入你的问题：')
-    print(chain.invoke('违反治安管理法，在什么情形下从重处罚'))
-    print('---------------')
+    
+    # print(main(query='请解释一下治安管理处罚法第50条',session_id='123'))
+    print(main(query='阻碍执行紧急任务的消防车、救护车。会如何处罚。',session_id='123'))
