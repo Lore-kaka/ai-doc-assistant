@@ -1,120 +1,187 @@
-# LangChain-Portfolio
+# 法律问答机器人
 
-基于 LangChain 构建的智能法律问答系统，对《中华人民共和国治安管理处罚法》的智能检索与解答。
+基于 LangChain 和 RAG 的《治安管理处罚法》智能问答系统。
 
-## 项目简介
-
-本项目是一个使用 LangChain 框架实现的 RAG（检索增强生成）应用，通过向量数据库检索相关法律条文，结合大语言模型生成准确、专业的法律解答。系统基于 NVIDIA AI 和 Ollama 的嵌入模型，提供高效的法律咨询服务。
-
-## 核心功能
+## 功能
 
 - **智能法律问答**：基于《中华人民共和国治安管理处罚法》的专业问答系统
-- **文档检索**：使用 Chroma 向量数据库进行高效的文档检索
-- **语义理解**：通过 OllamaEmbeddings (qwen3-embedding:0.6b) 实现语义嵌入
-- **大语言模型**：集成 NVIDIA AI 的 GPT-OSS-120B 模型生成专业回答
+- **混合检索**：向量检索 + BM25，提高检索准确度
+- **多轮对话**：支持上下文记忆的连续对话
+- **Web API**：提供 HTTP 接口，方便集成
 
 ## 技术栈
 
-- **FastAPI**: 现代化的 Web 框架
-- **LangChain**: 大语言模型应用开发框架
-- **Chroma**: 向量数据库，用于存储和检索文档嵌入
-- **NVIDIA AI**: 提供大语言模型服务
-- **Ollama**: 本地嵌入模型服务
+- **FastAPI** - Web 框架
+- **LangChain** - LLM 应用开发框架
+- **Chroma** - 向量数据库
+- **Ollama** - 本地嵌入模型
+- **NVIDIA AI** - 大语言模型服务
 
-## 项目结构
+## 快速开始
 
-```
-langchain-portfolio/
-├── app/
-│   ├── __init__.py
-│   └── rag/
-│       ├── __init__.py
-│       ├── chains.py        # LangChain 链式调用逻辑
-│       ├── services.py      # 文档加载、分割和向量检索服务
-│       └── chroma_db/       # Chroma 向量数据库存储                 
-├── pyproject.toml          # 项目依赖配置
-└── README.md               # 项目说明文档
-```
+### 1. 安装依赖
 
-## 环境要求
-
-- Python >= 3.12
-- Ollama (用于本地嵌入模型)
-- NVIDIA API Key
-
-## 安装步骤
-
-1. 克隆项目仓库
-```bash
-git clone <repository-url>
-cd fastapi-langchain-portfolio
-```
-
-2. 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
 
-3. 配置环境变量
-创建 `.env` 文件并添加：
+### 2. 配置环境变量
+
+创建 `.env` 文件：
+
+```bash
+cp .env.example .env
 ```
+
+编辑 `.env`，填入你的 NVIDIA API Key：
+
+```env
 NVIDIA_API_KEY=your_nvidia_api_key_here
 ```
 
-4. 启动 Ollama 服务
+### 3. 启动 Ollama 服务
+
 ```bash
+# 如果 Ollama 还未安装，访问 https://ollama.ai 下载安装
+
+# 启动 Ollama 服务
 ollama serve
+
+# 拉取嵌入模型（新终端）
+ollama pull bge-m3:latest
 ```
 
-5. 拉取嵌入模型
+### 4. 初始化数据库
+
 ```bash
-ollama pull qwen3-embedding:0.6b
+python scripts/init_db.py
 ```
 
-## 使用方法
+首次运行会自动从 PDF 切分文档并创建向量数据库，之后会直接加载已有数据库。
 
-### 运行主程序
+### 5. 启动服务
+
 ```bash
-python main.py
+# 方式 1: 直接运行
+python app/main.py
+
+# 方式 2: 使用 uvicorn
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 运行 RAG 链
+服务启动后访问：
+- **API 文档**: http://localhost:8000/docs
+- **健康检查**: http://localhost:8000/health
+
+## API 使用
+
+### 健康检查
+
 ```bash
+curl http://localhost:8000/health
+```
+
+响应：
+```json
+{
+  "status": "healthy",
+  "service": "legal-qa-bot",
+  "nvidia_configured": true
+}
+```
+
+### 发起问答
+
+```bash
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "阻碍执行紧急任务的消防车会如何处罚？",
+    "session_id": "user123"
+  }'
+```
+
+响应：
+```json
+{
+  "answer": "根据《治安管理处罚法》第五十条规定，阻碍执行紧急任务的消防车、救护车、工程抢险车、警车等车辆通行的，处警告或者二百元以下罚款..."
+}
+```
+
+### 多轮对话
+
+```bash
+# 第一轮
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "什么是扰乱公共秩序的行为？",
+    "session_id": "user123"
+  }'
+
+# 第二轮（保持上下文）
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "这种行为一般会怎么处罚？",
+    "session_id": "user123"
+  }'
+```
+
+## 项目结构
+
+```
+fastapi-langchain-portfolio/
+├── app/
+│   ├── main.py              # FastAPI 入口和路由
+│   └── rag/
+│       ├── chains.py        # LangChain 链和提示词
+│       ├── services.py      # 文档加载和切分
+│       ├── retriever.py     # 向量数据库管理
+│       └── utils.py         # 文本清洗工具
+├── data/
+│   └── 中华人民共和国治安管理处罚法.pdf
+├── scripts/
+│   └── init_db.py           # 数据库初始化脚本
+├── requirements.txt
+├── .env
+└── README.md
+```
+
+## 开发说明
+
+### 运行单个模块测试
+
+```bash
+# 测试文档切分
+python app/rag/services.py
+
+# 测试检索
+python app/rag/retriever.py
+
+# 测试 RAG 链
 python app/rag/chains.py
 ```
 
-### 运行文档检索服务
+### 重建数据库
+
+如果 PDF 内容有更新，需要重建数据库：
+
 ```bash
-python app/rag/services.py
+# 删除旧数据库
+rm -rf data/chroma_db
+
+# 重新初始化
+python scripts/init_db.py
 ```
-
-## 主要模块说明
-
-### chains.py
-- 定义了专业的法律助手提示词模板
-- 配置 NVIDIA AI 的 GPT-OSS-120B 模型
-- 实现了检索增强生成链（RAG Chain）
-
-### services.py
-- 加载和分割法律文档
-- 创建和管理 Chroma 向量数据库
-- 提供文档检索接口
-
-## 特点
-
-- **准确性**：严格基于法律条文回答，不编造信息
-- **专业性**：使用专业的法律语言，保持客观中立
-- **引用明确**：回答时准确引用相关条文
-- **高效检索**：基于向量数据库的语义检索
 
 ## 注意事项
 
-- 首次运行时会自动创建向量数据库，后续运行会直接加载已有数据库
-- 确保 Ollama 服务正常运行
-- 确保 NVIDIA API Key 配置正确
+1. **首次启动慢**：首次请求时会初始化向量数据库，需要 10-30 秒
+2. **Ollama 服务**：确保 Ollama 服务正在运行
+3. **NVIDIA API Key**：需要在 `.env` 文件中配置
+4. **对话历史**：当前版本对话历史保存在内存中，服务重启后会丢失
 
 ## 许可证
 
 MIT License
-
-
