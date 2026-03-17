@@ -13,9 +13,12 @@ dist/
 .DS_Store
 Thumbs.db
 
-# 向量数据库（不要提交，太大了）
+# 向量数据库
 chroma_db/
 data/chroma_db/
+
+# 聊天历史数据库
+data/chat_history.db
 
 # IDE
 .vscode/

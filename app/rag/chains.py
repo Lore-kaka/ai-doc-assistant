@@ -3,13 +3,17 @@ from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_classic.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_community.chat_message_histories import SQLChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from app.rag.retriever import get_retrieval_result
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# 对话历史数据库路径
+HISTORY_DB_PATH = Path(__file__).parent.parent.parent / "data" / "chat_history.db"
 
 # ==========================
 # 提示词模板
@@ -47,15 +51,22 @@ llm = ChatNVIDIA(
 )
 
 # ==========================
-# 对话历史管理（简化版：内存存储）
+# 对话历史管理（SQLite 持久化）
 # ==========================
-history = {}
-
 def get_chat_history(session_id: str):
-    """获取会话历史"""
-    if session_id not in history:
-        history[session_id] = ChatMessageHistory()
-    return history[session_id]
+    """
+    获取会话历史（持久化到 SQLite）
+
+    Args:
+        session_id: 会话ID
+
+    Returns:
+        SQLChatMessageHistory 实例
+    """
+    return SQLChatMessageHistory(
+        session_id=session_id,
+        connection_string=f"sqlite:///{HISTORY_DB_PATH}"
+    )
 
 # ==========================
 # RAG 链构建
